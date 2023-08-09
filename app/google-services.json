@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "344782463628",
+    "project_id": "ukl-kasir-104ea",
+    "storage_bucket": "ukl-kasir-104ea.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:344782463628:android:5c95b3a5e0cf566f6a91a9",
+        "android_client_info": {
+          "package_name": "com.example.ukl_kasir"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "344782463628-inmv8i1kdvklqkh70aoe3bes4748tfsf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCsjnlirVil9NleOQcsBLWd6Ahihdcm8go"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "344782463628-inmv8i1kdvklqkh70aoe3bes4748tfsf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
