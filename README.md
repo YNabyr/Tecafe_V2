@@ -3,10 +3,11 @@
 ~ Fitur Tersedia :
 - Registrasi dan memilih role (Admin, Kasir, Manager) menggunakan Firebase Authentication, Firebase Firestore
 - Login ke activity sesuai role (Admin, Kasir, Manager) menggunakan Firebase Authentication, Firebase Firestore
+- Setiap User memiliki Profil
+- CRUD meja, menu
+
 
 ~ Fitur Mendatang :
-- Profil
-- CRUD meja, menu
 - Transaksi
 - Histori transaksi
 
