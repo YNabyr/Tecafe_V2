@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <ImageView
+        android:id="@+id/menuItemImageAdapter"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        tools:layout_editor_absoluteX="8dp"
+        tools:layout_editor_absoluteY="8dp"
+        android:scaleType="centerCrop"
+        android:background="#757575"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:src="@drawable/placeholder_profile"/>
+
+    <TextView
+        android:id="@+id/menuNameAdapter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginLeft="8dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        app:layout_constraintStart_toEndOf="@+id/menuItemImageAdapter"
+        app:layout_constraintTop_toTopOf="@+id/menuItemImageAdapter"
+        tools:text="Ayam Geprek" />
+
+    <TextView
+        android:id="@+id/menuTypeAdapter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Makanan"
+        android:textSize="8sp"
+        android:layout_marginTop="4dp"
+        app:layout_constraintStart_toStartOf="@+id/menuNameAdapter"
+        app:layout_constraintTop_toBottomOf="@+id/menuNameAdapter" />
+
+    <TextView
+        android:id="@+id/menuPriceAdapter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Harga Menu"
+        android:layout_marginTop="4dp"
+        app:layout_constraintStart_toStartOf="@+id/menuTypeAdapter"
+        app:layout_constraintTop_toBottomOf="@+id/menuTypeAdapter" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

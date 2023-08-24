@@ -11,6 +11,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
 import com.example.ukl_kasir.databinding.FragmentProfileBinding
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -30,10 +33,11 @@ class ProfileFragment : Fragment() {
 
     private lateinit var binding: FragmentProfileBinding
     private lateinit var kasirActivity: KasirActivity
+    private lateinit var adminActivity: AdminActivity
     private lateinit var auth: FirebaseAuth
     private lateinit var db: FirebaseFirestore
     private lateinit var storage: FirebaseStorage
-    private lateinit var profileImageUri: Uri
+
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -46,104 +50,90 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        kasirActivity = activity as KasirActivity
+
+
         auth = FirebaseAuth.getInstance()
         db = FirebaseFirestore.getInstance()
         storage = FirebaseStorage.getInstance()
 
-        // Set data user and profile image here
-        // You can retrieve and display user data from Firestore in this section
-        // and display the profile image if it is available in Firebase Cloud Storage
 
-        // Upload profile image button click listener
-        binding.btnUploadImage.setOnClickListener {
-            selectProfileImage()
+        // Mengambil data dari Firestore berdasarkan userId
+        val userId = getUserId()
+
+        if (userId != null) {
+            val profileRef = db.collection("profile").document(userId)
+            profileRef.get().addOnSuccessListener { document ->
+                if (document != null && document.exists()) {
+                    val profileData = document.toObject(ProfileModel::class.java)
+                    if (profileData != null) {
+                        // Set retrieved data to UI elements
+                        binding.tvName.text = profileData.name
+                        binding.tvAge.text = profileData.age
+                        binding.tvBio.text = profileData.bio
+
+                        if (!profileData.image.isNullOrEmpty()) {
+                            val requestOptions = RequestOptions()
+                                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                .placeholder(R.drawable.placeholder_profile) // Placeholder image while loading
+                                .error(R.drawable.placeholder_profile) // Image to show in case of error
+
+                            Glide.with(requireContext())
+                                .load(profileData.image)
+                                .apply(requestOptions)
+                                .into(binding.ivProfileImage)
+                        }
+                    } else {
+                        showError("Failed to retrieve profile data")
+                    }
+                } else {
+                    showError("Profile data not found")
+                }
+            }.addOnFailureListener { exception ->
+                showError("Error fetching profile data: ${exception.message}")
+            }
+        } else {
+            showToastMessage("User not authenticated")
         }
 
-        // Save user data button click listener
-        binding.btnSaveData.setOnClickListener {
-            val userName = binding.edtName.text.toString()
-            val userAge = binding.edtAge.text.toString().toInt()
-            val userBio = binding.edtBio.text.toString()
-
-            updateUserProfileData(userName, userAge, userBio)
+        // Edit button click listener
+        binding.btnEdit.setOnClickListener {
+            val editIntent = Intent(requireContext(), EditProfileActivity::class.java)
+            startActivity(editIntent)
         }
 
-        // Logout button click listener
         binding.btnLogout.setOnClickListener {
             logOutUser()
         }
+
+
     }
 
-    private fun selectProfileImage() {
-        val galleryIntent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-        resultLauncher.launch(galleryIntent)
-    }
 
-    private val resultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val imageUri = result.data?.data
-            if (imageUri != null) {
-                profileImageUri = imageUri
-                binding.ivProfileImage.setImageURI(profileImageUri)
-                uploadProfileImage(profileImageUri)
-            }
-        }
-    }
-
-    private fun updateUserProfileData(userName: String, userAge: Int, userBio: String) {
-        val userId = kasirActivity.getUserId()
-
-        if (userId != null) {
-            val userMap = hashMapOf(
-                "name" to userName,
-                "age" to userAge,
-                "bio" to userBio
-            )
-
-            db.collection("Profile").document(userId)
-                .set(userMap)
-                .addOnSuccessListener {
-                    Toast.makeText(kasirActivity, "User data updated successfully.", Toast.LENGTH_SHORT).show()
-                }
-                .addOnFailureListener { exception ->
-                    Toast.makeText(kasirActivity, "Failed to update user data: ${exception.message}", Toast.LENGTH_SHORT).show()
-                }
-        }
-    }
-
-    private fun uploadProfileImage(imageUri: Uri) {
-        val userId = kasirActivity.getUserId()
-
-        if (userId != null) {
-            val storageRef = storage.reference.child("profile_images").child(userId)
-            val uploadTask = storageRef.putFile(imageUri)
-
-            uploadTask.addOnSuccessListener {
-                Toast.makeText(kasirActivity, "Profile image uploaded successfully.", Toast.LENGTH_SHORT).show()
-
-                // Get the URL of the uploaded image and save it to Firestore
-                storageRef.downloadUrl.addOnSuccessListener { uri ->
-                    val profileImageUrl = uri.toString()
-                    db.collection("Profile").document(userId)
-                        .update("profileImage", profileImageUrl)
-                        .addOnSuccessListener {
-                            Toast.makeText(kasirActivity, "Profile image URL saved.", Toast.LENGTH_SHORT).show()
-                        }
-                        .addOnFailureListener { exception ->
-                            Toast.makeText(kasirActivity, "Failed to save profile image URL: ${exception.message}", Toast.LENGTH_SHORT).show()
-                        }
-                }
-            }
-                .addOnFailureListener { exception ->
-                    Toast.makeText(kasirActivity, "Failed to upload profile image: ${exception.message}", Toast.LENGTH_SHORT).show()
-                }
-        }
+    fun getUserId(): String? {
+        return auth.currentUser?.uid
     }
 
     private fun logOutUser() {
         auth.signOut()
-        kasirActivity.showToastMessage("Logged out successfully.")
-        kasirActivity.finish() // Close the activity or navigate to Login screen
+        showToastMessage("Logged out successfully.")
+
+        // Pindahkan pengguna ke RegistrationActivity
+        val intent = Intent(requireContext(), LoginActivity::class.java)
+        startActivity(intent)
+        requireActivity().finish() // Menutup activity saat ini
+
     }
+
+
+
+    private fun showToastMessage(message: String) {
+        val context = requireContext()
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun showError(message: String) {
+        val context = requireContext()
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    }
+
 }

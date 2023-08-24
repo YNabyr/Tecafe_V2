@@ -10,24 +10,24 @@
         android:iconTint="@color/mtrl_textinput_default_box_stroke_color"
         android:title="Profile" />
     <item
+        android:id="@+id/user"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:icon="@drawable/baseline_group_24"
+        android:iconTint="@color/blue_shade_2"
+        android:title="User" />
+    <item
+        android:id="@+id/food"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:icon="@drawable/baseline_fastfood_24"
+        android:iconTint="@color/blue_shade_2"
+        android:title="Food" />
+    <item
         android:id="@+id/table"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:icon="@drawable/baseline_table_bar_24"
         android:iconTint="@color/blue_shade_2"
         android:title="Table" />
-    <item
-        android:id="@+id/payment"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:icon="@drawable/baseline_payment_24"
-        android:iconTint="@color/blue_shade_2"
-        android:title="Payment" />
-    <item
-        android:id="@+id/transaction"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:icon="@drawable/baseline_feed_24"
-        android:iconTint="@color/blue_shade_2"
-        android:title="Transaction" />
 </menu>
