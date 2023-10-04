@@ -1,5 +1,7 @@
 package com.example.ukl_kasir
 
+import android.content.ContentValues.TAG
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,11 +11,16 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.ukl_kasir.databinding.FragmentPaymentBinding
+import com.google.firebase.firestore.FirebaseFirestore
 
 
-class PaymentAdapter(private val paymentList: List<PaymentModel>,  private val fragmentBinding: FragmentPaymentBinding) :
+class PaymentAdapter(
+    private val paymentList: List<PaymentModel>,
+    private val fragmentBinding: FragmentPaymentBinding
+) :
     RecyclerView.Adapter<PaymentAdapter.PaymentViewHolder>() {
     private var totalHargaSemuaItem: Double = 0.0
+    private lateinit var db: FirebaseFirestore
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PaymentViewHolder {
         val itemView = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_payment, parent, false)
@@ -39,7 +46,8 @@ class PaymentAdapter(private val paymentList: List<PaymentModel>,  private val f
 
         // Menghitung dan menampilkan totalHargaItem
         val totalHarga = payment.totalHargaItem
-        holder.totalHargaItem.text = "Total Harga: Rp ${String.format("%.2f", totalHarga)}" // Format sesuai kebutuhan
+        holder.totalHargaItem.text =
+            "Total Harga: Rp ${String.format("%.2f", totalHarga)}" // Format sesuai kebutuhan
 
         holder.btnAdd.setOnClickListener {
             // Tambah 1 ke totalItem saat tombol "Tambah" ditekan
@@ -76,6 +84,42 @@ class PaymentAdapter(private val paymentList: List<PaymentModel>,  private val f
                 fragmentBinding.tvPrice.text = formattedTotalPrice
             }
         }
+
+        fragmentBinding.btnPesan.setOnClickListener {
+            pesan()
+
+        }
+    }
+
+    private fun pesan() {
+        db = FirebaseFirestore.getInstance()
+
+        totalHargaSemuaItem = paymentList.sumByDouble { it.totalHargaItem }
+        // Disini Anda dapat menyimpan data ke Firebase Firestore dalam collection 'payment'
+        // dengan ID yang digenerate secara otomatis.
+
+        val paymentData = hashMapOf(
+            "totalHarga" to this.totalHargaSemuaItem.toInt()
+            // Anda dapat menambahkan data lainnya yang ingin Anda simpan di sini.
+        )
+
+        db.collection("payment")
+            .add(paymentData)
+            .addOnSuccessListener { documentReference ->
+                // Penanganan sukses saat data berhasil disimpan
+                Log.d(TAG, "DocumentSnapshot added with ID: ${documentReference.id}")
+                // Reset totalHargaSemuaItem atau melakukan tindakan lain yang diperlukan setelah pesanan berhasil
+                totalHargaSemuaItem = 0.0
+                // Set ulang teks tvPrice menggunakan binding
+                updateTotalPriceTextView()
+                notifyDataSetChanged()
+
+
+            }
+            .addOnFailureListener { e ->
+                // Penanganan kesalahan jika gagal menyimpan data
+                Log.w(TAG, "Error adding document", e)
+            }
     }
 
     override fun getItemCount(): Int {
@@ -83,7 +127,7 @@ class PaymentAdapter(private val paymentList: List<PaymentModel>,  private val f
     }
 
     inner class PaymentViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val menuImagePayment: ImageView= itemView.findViewById(R.id.menuImagePayment)
+        val menuImagePayment: ImageView = itemView.findViewById(R.id.menuImagePayment)
         val menuNamePayment: TextView = itemView.findViewById(R.id.menuNamePayment)
         val menuTypePayment: TextView = itemView.findViewById(R.id.menuTypePayment)
         val menuPricePayment: TextView = itemView.findViewById(R.id.menuPricePayment)
@@ -98,10 +142,15 @@ class PaymentAdapter(private val paymentList: List<PaymentModel>,  private val f
 
         // Tambahkan referensi ke tampilan lain yang perlu Anda atur di sini.
     }
+
+
+
+
     private fun updateTotalPriceTextView() {
         val formattedTotalPrice = String.format("Harga: Rp %.2f", totalHargaSemuaItem)
-       fragmentBinding.tvPrice.text = formattedTotalPrice
+        fragmentBinding.tvPrice.text = formattedTotalPrice
     }
+
     private fun calculateTotalHargaSemuaItem() {
         totalHargaSemuaItem = paymentList.sumByDouble { it.totalHargaItem }
         updateTotalPriceTextView()

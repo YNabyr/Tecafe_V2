@@ -19,7 +19,7 @@ class PaymentFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var paymentAdapter: PaymentAdapter
     private val paymentList = mutableListOf<PaymentModel>() // List untuk menyimpan data dari Firestore
-var totalHargaSemuaItem: Double = 0.0
+    var totalHargaSemuaItem: Double = 0.0
     private var totalSemuaItem: Int = 0
 
 
@@ -64,9 +64,6 @@ var totalHargaSemuaItem: Double = 0.0
 
 
 
-        binding.btnPesan.setOnClickListener {
-            pesan()
-        }
     }
 
     private fun fetchDataFromFirestore() {
@@ -114,7 +111,7 @@ var totalHargaSemuaItem: Double = 0.0
                 // Reset totalHargaSemuaItem atau melakukan tindakan lain yang diperlukan setelah pesanan berhasil
                 totalHargaSemuaItem = 0.0
                 paymentList.clear()
-                calculateTotalSemuaItem()
+                // Set ulang teks tvPrice menggunakan binding
                 updateTotalPriceTextView()
                 paymentAdapter.notifyDataSetChanged()
             }
