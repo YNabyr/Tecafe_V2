@@ -3,14 +3,12 @@ package com.example.ukl_kasir
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
-import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import androidx.core.content.ContentProviderCompat.requireContext
+import androidx.appcompat.app.AppCompatActivity
 import com.example.ukl_kasir.databinding.ActivityEditProfileBinding
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -129,13 +127,36 @@ class EditProfileActivity : AppCompatActivity() {
 
             val profileData = ProfileModel(userId, name, age, bio, imageUrl)
 
-            db.collection("profile").document(userId).set(profileData)
+            db.collection("profile").document(userId).set(profileData, SetOptions.merge())
                 .addOnSuccessListener {
                     binding.pbLoading.visibility = View.GONE
-                    val intent = Intent(this, KasirActivity::class.java)
-                    startActivity(intent)
-                    showToastMessage("Profile data saved successfully.")
-                    finish()
+
+                    // Get the user's role from Firestore's "User" collection
+                    val userRef = db.collection("User").document(userId)
+                    userRef.get().addOnSuccessListener { documentSnapshot ->
+                        if (documentSnapshot.exists()) {
+                            val userData = documentSnapshot.toObject(UserModel::class.java)
+                            if (userData != null && userData.role.isNotEmpty()) {
+                                val role = userData.role // Get the user's role
+                                val nextActivity = when (role) {
+                                    "Kasir" -> KasirActivity::class.java
+                                    "Admin" -> AdminActivity::class.java
+                                    "Manager" -> ManagerActivity::class.java
+                                    else -> KasirActivity::class.java
+                                }
+                                val intent = Intent(this, nextActivity)
+                                startActivity(intent)
+                                showToastMessage("Profile data saved successfully.")
+                                finish()
+                            } else {
+                                showError("User role not found")
+                            }
+                        } else {
+                            showError("User data not found")
+                        }
+                    }.addOnFailureListener { exception ->
+                        showError("Error fetching user data: ${exception.message}")
+                    }
                 }
                 .addOnFailureListener { exception ->
                     showError("Error saving profile data: ${exception.message}")

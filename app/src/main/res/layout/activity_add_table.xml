@@ -6,6 +6,28 @@
     android:layout_height="match_parent"
     tools:context=".AddTableActivity">
 
+    <RadioGroup
+        android:id="@+id/rgStatusTable"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal"
+        app:layout_constraintStart_toStartOf="@+id/textInputLayout"
+        app:layout_constraintTop_toBottomOf="@+id/textInputLayout">
+
+        <RadioButton
+            android:id="@+id/rbTableTersedia"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tersedia" />
+
+        <RadioButton
+            android:id="@+id/rbTableTidakTersedia"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tidak Tersedia" />
+    </RadioGroup>
+
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/textInputLayout"
         android:layout_width="match_parent"
@@ -27,10 +49,10 @@
         android:id="@+id/btnSave"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="8dp"
         android:text="Save"
         app:layout_constraintStart_toStartOf="@+id/textInputLayout"
-        app:layout_constraintTop_toBottomOf="@+id/textInputLayout" />
+        app:layout_constraintTop_toBottomOf="@+id/rgStatusTable" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

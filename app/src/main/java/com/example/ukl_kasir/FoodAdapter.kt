@@ -2,7 +2,6 @@ package com.example.ukl_kasir
 
 import android.content.Intent
 import android.view.LayoutInflater
-import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView

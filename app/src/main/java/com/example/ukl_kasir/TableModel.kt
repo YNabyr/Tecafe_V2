@@ -4,6 +4,6 @@ data class TableModel(
 
     val tableId: String = "",
     val tableNum: Int = 0,
+    var status: String = "",
 
-
-)
+    )

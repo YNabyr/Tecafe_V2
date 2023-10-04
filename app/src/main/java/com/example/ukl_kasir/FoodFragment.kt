@@ -2,11 +2,11 @@ package com.example.ukl_kasir
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.appcompat.view.menu.MenuAdapter
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ukl_kasir.databinding.FragmentFoodBinding
@@ -27,7 +27,7 @@ private const val ARG_PARAM2 = "param2"
  * create an instance of this fragment.
  */
 class FoodFragment : Fragment() {
-
+    private lateinit var viewModel: FoodViewModel
     private lateinit var binding: FragmentFoodBinding
     private lateinit var firestore: FirebaseFirestore
     private lateinit var foodAdapter: FoodAdapter
@@ -52,6 +52,8 @@ class FoodFragment : Fragment() {
     private fun initViews() {
         recyclerView = binding.rvMenu
         firestore = FirebaseFirestore.getInstance()
+        viewModel = ViewModelProvider(this).get(FoodViewModel::class.java)
+        foodAdapter = FoodAdapter(emptyList())
     }
 
     private fun setupRecyclerView() {
@@ -74,19 +76,26 @@ class FoodFragment : Fragment() {
     }
 
     private fun fetchDataAndUpdateAdapter() {
-        GlobalScope.launch(Dispatchers.IO) {
-            try {
-                val querySnapshot = firestore.collection("menu").get().await()
-                val foodList = querySnapshot.toObjects(FoodModel::class.java)
-                launch(Dispatchers.Main) {
-                    foodAdapter.updateData(foodList)
+        if (viewModel.getFoodList().isEmpty()) {
+            // Ambil data dari Firestore hanya jika data belum ada di ViewModel
+            GlobalScope.launch(Dispatchers.IO) {
+                try {
+                    val querySnapshot = firestore.collection("menu").get().await()
+                    val foodList = querySnapshot.toObjects(FoodModel::class.java)
+                    launch(Dispatchers.Main) {
+                        foodAdapter.updateData(foodList)
+                        viewModel.setFoodList(foodList) // Simpan data ke ViewModel
+                    }
+                } catch (e: Exception) {
+                    showError("Error fetching data: ${e.message}")
                 }
-            } catch (e: Exception) {
-                showError("Error fetching data: ${e.message}")
             }
+        } else {
+            // Gunakan data yang sudah ada di ViewModel
+            val cachedFoodList = viewModel.getFoodList()
+            foodAdapter.updateData(cachedFoodList)
         }
     }
-
     private fun showError(message: String) {
         // Show an error message, e.g., using Toast
     }
@@ -101,3 +110,5 @@ class FoodFragment : Fragment() {
         }
     }
 }
+
+

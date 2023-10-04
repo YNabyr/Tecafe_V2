@@ -1,59 +1,141 @@
 package com.example.ukl_kasir
 
 import android.os.Bundle
-import androidx.fragment.app.Fragment
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.example.ukl_kasir.databinding.FragmentPaymentBinding
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.QuerySnapshot
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-/**
- * A simple [Fragment] subclass.
- * Use the [PaymentFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
 class PaymentFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
+
+    private lateinit var db: FirebaseFirestore
+    private lateinit var binding: FragmentPaymentBinding
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var paymentAdapter: PaymentAdapter
+    private val paymentList = mutableListOf<PaymentModel>() // List untuk menyimpan data dari Firestore
+var totalHargaSemuaItem: Double = 0.0
+    private var totalSemuaItem: Int = 0
+
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
-    }
+        db = FirebaseFirestore.getInstance()
 
+    }
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_payment, container, false)
+        binding = FragmentPaymentBinding.inflate(inflater, container, false)
+        recyclerView = binding.rvPayment
+
+        paymentAdapter = PaymentAdapter(paymentList, binding)
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
+        recyclerView.adapter = paymentAdapter
+
+        // Ambil data dari Firebase Firestore
+        fetchDataFromFirestore()
+
+        return binding.root
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment PaymentFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            PaymentFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        paymentAdapter = PaymentAdapter(paymentList, binding)
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
+        recyclerView.adapter = paymentAdapter
+
+        fetchDataFromFirestore()
+
+        // Inisialisasi teks tvPrice
+        updateTotalPriceTextView()
+
+        // Hitung ulang totalHargaSemuaItem
+        calculateTotalSemuaItem()
+
+
+
+        binding.btnPesan.setOnClickListener {
+            pesan()
+        }
+    }
+
+    private fun fetchDataFromFirestore() {
+        val db = FirebaseFirestore.getInstance()
+        val menuCollectionRef = db.collection("menu")
+
+        menuCollectionRef.get()
+            .addOnSuccessListener { querySnapshot: QuerySnapshot? ->
+                if (querySnapshot != null) {
+                    paymentList.clear()
+                   // Reset totalHargaSemuaItem
+
+                    for (document in querySnapshot.documents) {
+                        val menuData = document.toObject(PaymentModel::class.java)
+                        if (menuData != null) {
+                            paymentList.add(menuData)
+                            totalHargaSemuaItem += menuData.totalHargaItem
+                        }
+                    }
+
+                    // Setelah totalHargaSemuaItem dihitung ulang, perbarui tampilan tvPrice
+                    updateTotalPriceTextView()
+
+                    paymentAdapter.notifyDataSetChanged()
                 }
             }
+            .addOnFailureListener { exception ->
+                // Penanganan kesalahan jika gagal mengambil data
+            }
+    }
+    private fun pesan() {
+        // Disini Anda dapat menyimpan data ke Firebase Firestore dalam collection 'payment'
+        // dengan ID yang digenerate secara otomatis.
+
+        val paymentData = hashMapOf(
+            "totalHarga" to totalHargaSemuaItem
+            // Anda dapat menambahkan data lainnya yang ingin Anda simpan di sini.
+        )
+
+        db.collection("payment")
+            .add(paymentData)
+            .addOnSuccessListener { documentReference ->
+                // Penanganan sukses saat data berhasil disimpan
+                Log.d(TAG, "DocumentSnapshot added with ID: ${documentReference.id}")
+                // Reset totalHargaSemuaItem atau melakukan tindakan lain yang diperlukan setelah pesanan berhasil
+                totalHargaSemuaItem = 0.0
+                paymentList.clear()
+                calculateTotalSemuaItem()
+                updateTotalPriceTextView()
+                paymentAdapter.notifyDataSetChanged()
+            }
+            .addOnFailureListener { e ->
+                // Penanganan kesalahan jika gagal menyimpan data
+                Log.w(TAG, "Error adding document", e)
+            }
+    }
+
+    // Metode lainnya seperti fetchDataFromFirestore, updateTotalPriceTextView, dsb...
+
+    companion object {
+        private const val TAG = "PaymentFragment"
+    }
+    private fun calculateTotalSemuaItem() {
+        totalSemuaItem = paymentList.sumBy { it.totalItem }
+        updateTotalPriceTextView()
+    }
+    private fun updateTotalPriceTextView() {
+        val formattedTotalPrice = String.format("Harga: Rp %.2f", totalHargaSemuaItem)
+        binding.tvPrice.text = formattedTotalPrice
     }
 }
+

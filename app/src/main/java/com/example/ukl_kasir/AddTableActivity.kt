@@ -1,11 +1,10 @@
 package com.example.ukl_kasir
 
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.view.View
+import android.widget.RadioButton
 import android.widget.Toast
-import com.example.ukl_kasir.databinding.ActivityAddFoodBinding
+import androidx.appcompat.app.AppCompatActivity
 import com.example.ukl_kasir.databinding.ActivityAddTableBinding
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -29,8 +28,11 @@ class AddTableActivity : AppCompatActivity() {
     private fun saveTableData() {
         val tableId = db.collection("table").document().id
         val tableNum = binding.edtTableNum.text.toString().toInt()
+        val selectedStatusId = binding.rgStatusTable.checkedRadioButtonId
+        val selectedStatusRadio = findViewById<RadioButton>(selectedStatusId)
+        val statusTable = selectedStatusRadio.text.toString()
 
-        val tableData = TableModel(tableId, tableNum)
+        val tableData = TableModel(tableId, tableNum, statusTable )
 
         db.collection("table")
             .document(tableId)

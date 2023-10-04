@@ -2,14 +2,15 @@ package com.example.ukl_kasir
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.ukl_kasir.databinding.FragmentFoodBinding
 import com.example.ukl_kasir.databinding.FragmentTableBinding
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -28,10 +29,13 @@ class TableFragment : Fragment() {
     private var param1: String? = null
     private var param2: String? = null
 
+    // Deklarasikan ViewModel
     private lateinit var binding: FragmentTableBinding
+
     private lateinit var firestore: FirebaseFirestore
     private lateinit var tableAdapter: TableAdapter
-    private lateinit var recyclerView: RecyclerView // Initialize the recyclerView
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var viewModel: TableViewModel // Initialize the recyclerView
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,14 +58,15 @@ class TableFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize the recyclerView
         recyclerView = binding.rvTable
-
-        // Initialize other components and set up the adapter
         firestore = FirebaseFirestore.getInstance()
+
+        // Inisialisasi ViewModel
+        viewModel = ViewModelProvider(this).get(TableViewModel::class.java)
 
         // Fetch table data from Firestore and populate the tableList
         firestore.collection("table")
+            .orderBy("tableNum") // Menambahkan orderBy ke sini untuk mengurutkan berdasarkan tableNum
             .get()
             .addOnSuccessListener { result ->
                 val tableList = mutableListOf<TableModel>()
@@ -70,27 +75,41 @@ class TableFragment : Fragment() {
                     tableList.add(tableData)
                 }
 
-                // Set up the adapter with the fetched table data
-                tableAdapter = TableAdapter(tableList) { clickedTable ->
-                    // Handle item click here
-                    // You can open a new activity or perform any desired action
-                    showToastMessage("Clicked on Table ${clickedTable.tableNum}")
-                }
-                recyclerView.adapter = tableAdapter
-                recyclerView.layoutManager = LinearLayoutManager(requireContext())
+                // Set data tabel menggunakan ViewModel
+                viewModel.setTableData(tableList)
             }
             .addOnFailureListener { exception ->
                 showError("Error fetching table data: ${exception.message}")
             }
 
-        // Mendapatkan referensi ke FloatingActionButton dari binding
+        tableAdapter = TableAdapter { clickedTable ->
+            // Handle item click here
+            viewModel.updateTableStatus(clickedTable)
+        }
+
+        recyclerView.adapter = tableAdapter
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
+
+        // Observe changes in tableData LiveData from ViewModel
+        viewModel.tableData.observe(viewLifecycleOwner, Observer { tableData ->
+            // Update RecyclerView adapter with the latest data
+            tableAdapter.submitList(tableData)
+        })
+
+        // Get a reference to the FloatingActionButton from the binding
         val fabAddTable = binding.fabAddTable
 
-        // Menambahkan OnClickListener ke FloatingActionButton
-        fabAddTable.setOnClickListener {
-            // Membuat Intent untuk pindah ke AddTableActivity
-            val intent = Intent(requireContext(), AddTableActivity::class.java)
-            startActivity(intent)
+        val isFromKasirActivity = requireActivity() is KasirActivity
+
+        // Hide the FloatingActionButton if TableFragment is called from KasirActivity
+        if (isFromKasirActivity) {
+            fabAddTable.visibility = View.GONE
+        } else {
+            // Add OnClickListener to the FloatingActionButton
+            fabAddTable.setOnClickListener {
+                val intent = Intent(requireContext(), AddTableActivity::class.java)
+                startActivity(intent)
+            }
         }
     }
 
@@ -105,23 +124,5 @@ class TableFragment : Fragment() {
     }
 
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment TableFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            TableFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
-                }
-            }
-    }
+
 }
