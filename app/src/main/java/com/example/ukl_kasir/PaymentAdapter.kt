@@ -12,6 +12,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.ukl_kasir.databinding.FragmentPaymentBinding
 import com.google.firebase.firestore.FirebaseFirestore
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 
 class PaymentAdapter(
@@ -92,15 +95,28 @@ class PaymentAdapter(
     }
 
     private fun pesan() {
-        db = FirebaseFirestore.getInstance()
+        val selectedTable = fragmentBinding.spTable.selectedItem.toString() // Mendapatkan meja yang dipilih dari Spinner
+        val tableNumber = selectedTable.removePrefix("Meja ").toInt() // Mengambil nomor meja dari teks yang dipilih
 
-        totalHargaSemuaItem = paymentList.sumByDouble { it.totalHargaItem }
-        // Disini Anda dapat menyimpan data ke Firebase Firestore dalam collection 'payment'
-        // dengan ID yang digenerate secara otomatis.
+        // Mengelompokkan menuNamePayment berdasarkan menuTypePayment
+        val menuTypeToMenuNames = paymentList.groupBy { it.menuType }
 
+        // Simpan tanggal hari ini dalam format "yyyy-MM-dd"
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val currentDate = dateFormat.format(Date())
+
+        // Menghitung seluruh totalItem dari pesanan
+        val allTotalItem = paymentList.sumBy { it.totalItem }
+
+        // Simpan data selectedTable ke Firebase Firestore dalam koleksi "payment"
+        val db = FirebaseFirestore.getInstance()
         val paymentData = hashMapOf(
-            "totalHarga" to this.totalHargaSemuaItem.toInt()
-            // Anda dapat menambahkan data lainnya yang ingin Anda simpan di sini.
+            "tableNumber" to tableNumber,
+            "totalHargaSemua" to totalHargaSemuaItem,
+            "totalItem" to allTotalItem,// Simpan totalHargaSemua
+            "tanggal" to currentDate,
+            "statusPembayaran" to "Belum Dibayar",
+            // Anda dapat menambahkan data lain yang ingin Anda simpan di sini.
         )
 
         db.collection("payment")
@@ -108,13 +124,18 @@ class PaymentAdapter(
             .addOnSuccessListener { documentReference ->
                 // Penanganan sukses saat data berhasil disimpan
                 Log.d(TAG, "DocumentSnapshot added with ID: ${documentReference.id}")
+
                 // Reset totalHargaSemuaItem atau melakukan tindakan lain yang diperlukan setelah pesanan berhasil
                 totalHargaSemuaItem = 0.0
                 // Set ulang teks tvPrice menggunakan binding
                 updateTotalPriceTextView()
                 notifyDataSetChanged()
 
+                // Panggil updateTableStatusToNotAvailable(tableNumber) setelah penyimpanan data berhasil
+                updateTableStatusToNotAvailable(tableNumber)
 
+                // Panggil saveMenuNamesToSubcollections() untuk menyimpan menuNamePayment ke subkoleksi yang sesuai
+                saveMenuNamesToSubcollections(menuTypeToMenuNames, documentReference.id)
             }
             .addOnFailureListener { e ->
                 // Penanganan kesalahan jika gagal menyimpan data
@@ -122,6 +143,66 @@ class PaymentAdapter(
             }
     }
 
+    private fun updateTableStatusToNotAvailable(tableNumber: Int) {
+        val db = FirebaseFirestore.getInstance()
+        val tableCollectionRef = db.collection("table")
+
+        tableCollectionRef.whereEqualTo("tableNum", tableNumber)
+            .get()
+            .addOnSuccessListener { querySnapshot ->
+                if (querySnapshot.documents.isNotEmpty()) {
+                    val tableDocument = querySnapshot.documents[0]
+                    tableDocument.reference.update("status", "Tidak Tersedia")
+                        .addOnSuccessListener {
+                            // Penanganan sukses saat update berhasil
+                            Log.d(TAG, "TableStatus updated to 'Tidak Tersedia' for Table $tableNumber")
+
+                            // Reset totalHargaSemuaItem atau melakukan tindakan lain yang diperlukan setelah pesanan berhasil
+                            totalHargaSemuaItem = 0.0
+                            // Set ulang teks tvPrice menggunakan binding
+                            updateTotalPriceTextView()
+                            notifyDataSetChanged()
+                        }
+                        .addOnFailureListener { exception ->
+                            // Penanganan kesalahan jika gagal melakukan update
+                            Log.w(TAG, "Error updating tableStatus", exception)
+                        }
+                }
+            }
+            .addOnFailureListener { exception ->
+                // Penanganan kesalahan jika gagal mendapatkan data meja
+                Log.w(TAG, "Error getting table data", exception)
+            }
+    }
+
+    private fun saveMenuNamesToSubcollections(menuTypeToMenuNames: Map<String, List<PaymentModel>>, paymentId: String) {
+        val db = FirebaseFirestore.getInstance()
+
+        // Iterasi melalui map menuTypeToMenuNames
+        for ((menuType, menuNames) in menuTypeToMenuNames) {
+            val subcollectionRef = db.collection("payment").document(paymentId).collection(menuType)
+
+            // Iterasi melalui list menuNames dalam setiap menuType
+            for (payment in menuNames) {
+                val menuData = hashMapOf(
+                    "menuName" to payment.menuName,
+                    "totalItem" to payment.totalItem, // Menyimpan totalItem
+                    "totalHargaItem" to payment.totalHargaItem, // Menyimpan totalHargaItem
+                    // Anda dapat menambahkan data lain yang ingin Anda simpan di sini.
+                )
+
+                subcollectionRef.add(menuData)
+                    .addOnSuccessListener {
+                        // Penanganan sukses saat data berhasil disimpan di subkoleksi
+                        Log.d(TAG, "DocumentSnapshot added to subcollection: $menuType")
+                    }
+                    .addOnFailureListener { exception ->
+                        // Penanganan kesalahan jika gagal menyimpan data di subkoleksi
+                        Log.w(TAG, "Error adding document to subcollection", exception)
+                    }
+            }
+        }
+    }
     override fun getItemCount(): Int {
         return paymentList.size
     }

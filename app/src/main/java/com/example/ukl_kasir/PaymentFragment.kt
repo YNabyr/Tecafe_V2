@@ -1,10 +1,10 @@
 package com.example.ukl_kasir
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -22,7 +22,7 @@ class PaymentFragment : Fragment() {
     var totalHargaSemuaItem: Double = 0.0
     private var totalSemuaItem: Int = 0
 
-
+    private lateinit var tableAdapter: ArrayAdapter<String>
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,6 +37,9 @@ class PaymentFragment : Fragment() {
         binding = FragmentPaymentBinding.inflate(inflater, container, false)
         recyclerView = binding.rvPayment
 
+        // Inisialisasi Spinner untuk memilih meja
+        setupTableSpinner()
+
         paymentAdapter = PaymentAdapter(paymentList, binding)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = paymentAdapter
@@ -44,15 +47,60 @@ class PaymentFragment : Fragment() {
         // Ambil data dari Firebase Firestore
         fetchDataFromFirestore()
 
+        // Inisialisasi Spinner untuk memilih meja
+
+
         return binding.root
     }
 
+    private fun setupTableSpinner() {
+        // Inisialisasi adapter untuk Spinner
+        tableAdapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_item
+        )
+        tableAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spTable.adapter = tableAdapter
+
+        // Ambil data meja dari Firebase Firestore
+        fetchAndSortTableDataFromFirestore()
+    }
+
+    private fun fetchAndSortTableDataFromFirestore() {
+        val db = FirebaseFirestore.getInstance()
+        val tableCollectionRef = db.collection("table")
+
+        tableCollectionRef.whereEqualTo("status", "Tersedia") // Filter hanya "Tersedia"
+            .get()
+            .addOnSuccessListener { querySnapshot: QuerySnapshot? ->
+                if (querySnapshot != null) {
+                    val tableList = mutableListOf<TableModel>()
+                    for (document in querySnapshot.documents) {
+                        val tableData = document.toObject(TableModel::class.java)
+                        if (tableData != null) {
+                            tableList.add(tableData)
+                        }
+                    }
+
+                    // Urutkan data meja berdasarkan tableNum
+                    tableList.sortBy { it.tableNum }
+
+                    // Tambahkan "Meja" di depan setiap nomor meja
+                    val tableNumWithPrefix = tableList.map { "Meja ${it.tableNum}" }
+
+                    // Update data pada Spinner
+                    tableAdapter.clear()
+                    tableAdapter.addAll(tableNumWithPrefix)
+                    tableAdapter.notifyDataSetChanged()
+                }
+            }
+            .addOnFailureListener { exception ->
+                // Penanganan kesalahan jika gagal mengambil data meja
+            }
+    }
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        paymentAdapter = PaymentAdapter(paymentList, binding)
-        recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        recyclerView.adapter = paymentAdapter
 
         fetchDataFromFirestore()
 
@@ -94,38 +142,11 @@ class PaymentFragment : Fragment() {
                 // Penanganan kesalahan jika gagal mengambil data
             }
     }
-    private fun pesan() {
-        // Disini Anda dapat menyimpan data ke Firebase Firestore dalam collection 'payment'
-        // dengan ID yang digenerate secara otomatis.
 
-        val paymentData = hashMapOf(
-            "totalHarga" to totalHargaSemuaItem
-            // Anda dapat menambahkan data lainnya yang ingin Anda simpan di sini.
-        )
 
-        db.collection("payment")
-            .add(paymentData)
-            .addOnSuccessListener { documentReference ->
-                // Penanganan sukses saat data berhasil disimpan
-                Log.d(TAG, "DocumentSnapshot added with ID: ${documentReference.id}")
-                // Reset totalHargaSemuaItem atau melakukan tindakan lain yang diperlukan setelah pesanan berhasil
-                totalHargaSemuaItem = 0.0
-                paymentList.clear()
-                // Set ulang teks tvPrice menggunakan binding
-                updateTotalPriceTextView()
-                paymentAdapter.notifyDataSetChanged()
-            }
-            .addOnFailureListener { e ->
-                // Penanganan kesalahan jika gagal menyimpan data
-                Log.w(TAG, "Error adding document", e)
-            }
-    }
 
-    // Metode lainnya seperti fetchDataFromFirestore, updateTotalPriceTextView, dsb...
 
-    companion object {
-        private const val TAG = "PaymentFragment"
-    }
+
     private fun calculateTotalSemuaItem() {
         totalSemuaItem = paymentList.sumBy { it.totalItem }
         updateTotalPriceTextView()
